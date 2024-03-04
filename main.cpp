@@ -1,107 +1,137 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/freeglut.h>
+#include <math.h>
+#include <iostream>
+#include "ImageLoader.h"
 
-class Matriz {
-private:
-  int largura;
-  int altura;
-  int valorMaximo;
-  std::vector<std::vector<int>> matriz;
+using namespace std;
 
-public:
-  Matriz(int larg, int alt, int maxVal,
-         const std::vector<std::vector<int>> &mat)
-      : largura(larg), altura(alt), valorMaximo(maxVal), matriz(mat) {}
+float posCameraX,posCameraY,posCameraZ;
 
-  int getLargura() const { return largura; }
-  int getAltura() const { return altura; }
-  int getValorMaximo() const { return valorMaximo; }
-  const std::vector<std::vector<int>> &getMatriz() const { return matriz; }
-};
+void init(void) 
+{
+  glClearColor (1.0, 1.0, 1.0, 0.0);
+  
+  posCameraX = 0.3;
+  posCameraY = 0.3;
+  posCameraZ = 0.3;
+}
 
-class ImageLoader {
-private:
-  // Método para ler o cabeçalho da imagem
-  void lerCabecalho(FILE *arquivo, int &largura, int &altura,
-                    int &valorMaximo) {
-    char tipo[20];
-    if (fgets(tipo, 20, arquivo) == NULL) {
-      printf("Erro ao ler o cabeçalho da imagem.\n");
-    }
-
-    char linha[256];
-    while (fgets(linha, sizeof(linha), arquivo) && linha[0] == '#')
-      ;
-
-    if (sscanf(linha, "%d %d", &largura, &altura) != 1) {
-      // printf("Erro ao ler o tamanho da imagem.\n");
-    };
-
-    if (fgets(linha, sizeof(linha), arquivo) == NULL) {
-      printf("Erro !\n");
-    };
-    if (sscanf(linha, "%d", &valorMaximo) != 1) {
-      printf("Erro ao ler o valor máximo da imagem.\n");
-    };
+void specialKeys(int key, int x, int y)
+{
+  float angulo = 2*M_PI/180;
+  switch (key) {
+    case GLUT_KEY_LEFT : 
+      posCameraX =  posCameraX*cos(-angulo) + posCameraY*sin(-angulo);
+      posCameraY = -posCameraX*sin(-angulo) + posCameraY*cos(-angulo);
+      break;
+    case GLUT_KEY_RIGHT : 
+      posCameraX =  posCameraX*cos(angulo) + posCameraY*sin(angulo);
+      posCameraY = -posCameraX*sin(angulo) + posCameraY*cos(angulo);                      
+      break;
+    case GLUT_KEY_UP:
+      posCameraZ += 0.01;
+      break;
+    case GLUT_KEY_DOWN:
+      posCameraZ -= 0.01;
+      break;
   }
+  glutPostRedisplay();
+}
 
-  // Método para ler os dados da matriz da imagem
-  std::vector<std::vector<int>> lerMatriz(FILE *arquivo, int largura,
-                                          int altura) {
-    std::vector<std::vector<int>> matriz(altura, std::vector<int>(largura));
+void display(void)
+{
+	glClear (GL_COLOR_BUFFER_BIT);
 
-    for (int i = 0; i < altura; ++i) {
-      for (int j = 0; j < largura; ++j) {
-        if (fscanf(arquivo, "%d", &matriz[i][j]) != 1) {
-          printf("Erro ao ler pixel");
-        };
-      }
-    }
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
 
-    return matriz;
-  }
+  gluLookAt (posCameraX, posCameraY, posCameraZ, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0);
 
-public:
-  // Método para carregar a matriz de pixels a partir de um arquivo
-  Matriz load(const char *nomeArquivo) {
-    FILE *arquivo = fopen(nomeArquivo, "r");
-
-    if (!arquivo) {
-      fprintf(stderr, "Erro ao abrir o arquivo.\n");
-      exit(1);
-    }
-
-    int largura, altura, valorMaximo;
-    lerCabecalho(arquivo, largura, altura, valorMaximo);
-    std::vector<std::vector<int>> matriz = lerMatriz(arquivo, largura, altura);
-
-    fclose(arquivo);
-
-    return Matriz(largura, altura, valorMaximo, matriz);
-  }
-};
-
-int main() {
   const char *nomeArquivo = "imagem.pgm";
 
   ImageLoader loader;
   Matriz matriz = loader.load(nomeArquivo);
 
-  // Obtendo a matriz de pixels
-  const std::vector<std::vector<int>> &pixels = matriz.getMatriz();
+  const vector<vector<int>> &pixels = matriz.getMatriz();
 
-  printf("%d x %d\n", matriz.getLargura(), matriz.getAltura());
-  printf("%d\n", matriz.getValorMaximo());
+  glBegin(GL_LINES);
+    glColor3f (1.0, 0.0, 0.0);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(1.0, 0.0, 0.0);
+    
+    glColor3f (0.0, 1.0, 0.0);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(0.0, 1.0, 0.0);
+  
+    glColor3f (0.0, 0.0, 1.0);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(0.0, 0.0, 1.0);    
+  glEnd();
+  
+  float eixoX = 0.0;
+  float eixoY = 0.0;
+  float eixoZ = 0.0;
 
-  // Imprimindo a matriz
-  printf("Matriz:\n");
-  for (const auto &linha : pixels) {
-    for (int valor : linha) {
-      printf("%d ", valor);
+  glColor3f(0.7, 0.5, 0.4);
+  for(int x = 0; x < matriz.getLargura() - 1; x++)
+  {
+    for(int y = 0; y < matriz.getAltura() - 1; y++)
+    {
+      glBegin(GL_LINE_LOOP);
+        eixoX = (float) x / (float) matriz.getLargura();
+        eixoY = (float) y / (float) matriz.getAltura();
+        eixoZ = (float) matriz.getValorPosicao(x, y) / (float) matriz.getValorMaximo();
+
+        glVertex3f (eixoX, eixoY, eixoZ);
+
+        eixoX = (float) (x + 1) / (float) matriz.getLargura();
+        eixoY = (float) y / (float) matriz.getAltura();
+        eixoZ = (float) matriz.getValorPosicao(x + 1, y) / (float) matriz.getValorMaximo();
+        
+        glVertex3f (eixoX, eixoY, eixoZ);
+
+        eixoX = (float) x / (float) matriz.getLargura();
+        eixoY = (float) (y + 1) / (float) matriz.getAltura();
+        eixoZ = (float) matriz.getValorPosicao(x, y + 1) / (float) matriz.getValorMaximo();
+        
+        glVertex3f (eixoX, eixoY, eixoZ);
+      glEnd();
     }
-    printf("\n");
   }
 
+  glutSwapBuffers();
+}
+
+void reshape(int w, int h)
+{
+  glViewport (0, 0, (GLsizei) w, (GLsizei) h);
+  
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
+
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+}
+
+
+int main(int argc, char** argv)
+{
+  glutInit(&argc, argv);
+  glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB);
+  glutInitWindowSize (500, 500); 
+  glutInitWindowPosition (100, 100);
+  glutCreateWindow (argv[0]);
+
+  init ();
+
+  glutDisplayFunc(display); 
+  glutSpecialFunc(specialKeys);
+  glutReshapeFunc(reshape);
+  
+  glutMainLoop();
+  
   return 0;
 }

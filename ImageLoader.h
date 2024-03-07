@@ -9,11 +9,11 @@ class ImageLoader
     private:
     void lerCabecalho(FILE *arquivo, int &largura, int &altura, int &valorMaximo)
     {
-        char tipo[20];
+        char tipo[20] = {""};
 
         if(fgets(tipo, 20, arquivo) == NULL) cout << "Erro ao ler o cabeçalho da imagem.\n" << endl;
 
-        char linha[256];
+        char linha[256] = {""};
 
         while(fgets(linha, sizeof(linha), arquivo) && linha[0] == '#');
 
